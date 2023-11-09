@@ -2,15 +2,15 @@
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>
-#include "coordReader.c"
 #include <omp.h>
+#include "coordReader.c"
 
 void matrixDistanceCalc(double **coords, int numOfCoords, double **distanceMatrix) {
     double start_time = omp_get_wtime(); // Capture the start time
 
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for
     for (int i = 0; i < numOfCoords; i++) {
-        for (int j = 0; j < numOfCoords; j++) {
+        for (int j = i + 1; j < numOfCoords; j++) {
             double x1 = coords[i][0];
             double y1 = coords[i][1];
             double x2 = coords[j][0];
@@ -19,65 +19,71 @@ void matrixDistanceCalc(double **coords, int numOfCoords, double **distanceMatri
             // Calculate the Euclidean distance
             double distance = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 
-            for (int i = 0; i < numOfCoords; ++i) {
-                distanceMatrix[i][i] = 0;
-            }
+            distanceMatrix[i][j] = distance;
+            distanceMatrix[j][i] = distance;
         }
+        // Set diagonal elements to 0
+        distanceMatrix[i][i] = 0;
     }
-
     double end_time = omp_get_wtime(); // Capture the end time
     double execution_time = end_time - start_time;
     printf("Matrix calculation time: %f seconds\n", execution_time);
 }
 
 void cheapestInsertion(double **distanceMatrix, int numOfCoords, int *tour) {
-    int *visited = (int *)malloc(numOfCoords * sizeof(int));
+    double start_time = omp_get_wtime(); // Capture the start time
+    int visited[numOfCoords];
+//#pragma omp parallel for
     for (int i = 0; i < numOfCoords; i++) {
         visited[i] = 0;
+        tour[i] = -1;
     }
-    tour[0] = 0;
-    visited[0] = 1;
+
+    // Start with the first vertex as the initial tour
+    int currentVertex = 0;
+    tour[0] = currentVertex;
+    visited[currentVertex] = 1;
 
     for (int currentPosition = 1; currentPosition < numOfCoords; currentPosition++) {
         int bestVertex = -1;
         int bestPosition = -1;
         double minInsertionCost = DBL_MAX; // Initialize with a large value
-
-        #pragma omp parallel for schedule(static)
-        for (int v = 0; v < numOfCoords; v++) {
-            if (!visited[v]) {
-                for (int i = 0; i < currentPosition; i++) {
-                    int vi = tour[i];
-                    int viPlus1 = tour[(i + 1) % currentPosition];
-                    double insertionCost = distanceMatrix[vi][v] + distanceMatrix[v][viPlus1] - distanceMatrix[vi][viPlus1];
-
-                    #pragma omp critical
-                    {
+        #pragma omp parallel //for schedule(static)
+        for (int vk = 0; vk < numOfCoords; vk++) {
+            if (!visited[vk]) {
+                for (int vn = 0; vn < currentPosition; vn++) {
+                    int vi = tour[vn];
+                    int viPlus1 = tour[(vn + 1) % currentPosition];
+                    double insertionCost = distanceMatrix[vi][vk] + distanceMatrix[vk][viPlus1] - distanceMatrix[vi][viPlus1];
                         if (insertionCost < minInsertionCost) {
-                            minInsertionCost = insertionCost;
-                            bestVertex = v;
-                            bestPosition = i;
+#pragma omp critical
+                            {
+                                minInsertionCost = insertionCost;
+                                bestVertex = vk;
+                                bestPosition = vn;
+                            }
                         }
-                    }
+
                 }
             }
         }
 
-        // Update the tour with the best insertion
         for (int i = currentPosition; i > bestPosition; i--) {
             tour[i] = tour[i - 1];
         }
         tour[bestPosition + 1] = bestVertex;
         visited[bestVertex] = 1;
     }
-
-    free(visited);
+    double end_time = omp_get_wtime(); // Capture the end time
+    double execution_time = end_time - start_time;
+    printf("Insertion calculation time: %f seconds\n", execution_time);
 }
 
 int main() {
-    double main_start_time = omp_get_wtime(); // Capture the start time
-    omp_set_num_threads(8);
-    char filename[] = "C:/Users/isaac/CLionProjects/TSPMulti/16_coords.coord";
+    omp_set_num_threads(12);
+    double start_time = omp_get_wtime(); // Capture the start time
+
+    char filename[] = "C:/Users/isaac/CLionProjects/TSPMulti/4096_coords.coord";
 
     int numOfCoords = readNumOfCoords(filename);
 
@@ -102,11 +108,12 @@ int main() {
     int *tour = (int *)malloc(numOfCoords * sizeof(int));
     cheapestInsertion(distanceMatrix, numOfCoords, tour);
 
-    printf("Final Tour: ");
+    /*printf("Final Tour: ");
     for (int i = 0; i < numOfCoords; i++) {
         printf("%d ", tour[i]);
     }
     printf("%d\n", tour[0]);
+     */
 
     for (int i = 0; i < numOfCoords; i++) {
         free(distanceMatrix[i]);
@@ -115,9 +122,9 @@ int main() {
     free(coords);
     free(tour);
 
-    double main_end_time = omp_get_wtime(); // Capture the end time
-    double execution_time = main_end_time - main_start_time;
-    printf("Total execution time: %f seconds\n", execution_time);
+    double end_time = omp_get_wtime(); // Capture the end time
+    double execution_time = end_time - start_time;
+    printf("Execution time: %f seconds\n", execution_time);
 
     return 0;
 }
