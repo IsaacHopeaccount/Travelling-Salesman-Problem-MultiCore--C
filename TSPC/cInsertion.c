@@ -24,29 +24,33 @@ void matrixDistanceCalc(double **coords, int numOfCoords, double **distanceMatri
 }
 
 void cheapestInsertion(double **distanceMatrix, int numOfCoords, int *tour) {
-    int *visited = (int *)malloc(numOfCoords * sizeof(int));
+    int visited[numOfCoords];
     for (int i = 0; i < numOfCoords; i++) {
         visited[i] = 0;
+        tour[i] = -1;
     }
-    tour[0] = 0;
-    visited[0] = 1;
+
+    // Start with the first vertex as the initial tour
+    int currentVertex = 0;
+    tour[0] = currentVertex;
+    visited[currentVertex] = 1;
 
     for (int currentPosition = 1; currentPosition < numOfCoords; currentPosition++) {
         int bestVertex = -1;
         int bestPosition = -1;
         double minInsertionCost = DBL_MAX; // Initialize with a large value
 
-        for (int v = 0; v < numOfCoords; v++) {
-            if (!visited[v]) {
-                for (int i = 0; i < currentPosition; i++) {
-                    int vi = tour[i];
-                    int viPlus1 = tour[(i + 1) % currentPosition];
-                    double insertionCost = distanceMatrix[vi][v] + distanceMatrix[v][viPlus1] - distanceMatrix[vi][viPlus1];
+        for (int vk = 0; vk < numOfCoords; vk++) {
+            if (!visited[vk]) {
+                for (int vn = 0; vn < currentPosition; vn++) {
+                    int vi = tour[vn];
+                    int viPlus1 = tour[(vn + 1) % currentPosition];
+                    double insertionCost = distanceMatrix[vi][vk] + distanceMatrix[vk][viPlus1] - distanceMatrix[vi][viPlus1];
 
                     if (insertionCost < minInsertionCost) {
                         minInsertionCost = insertionCost;
-                        bestVertex = v;
-                        bestPosition = i;
+                        bestVertex = vk;
+                        bestPosition = vn;
                     }
                 }
             }
@@ -57,14 +61,11 @@ void cheapestInsertion(double **distanceMatrix, int numOfCoords, int *tour) {
         }
         tour[bestPosition + 1] = bestVertex;
         visited[bestVertex] = 1;
-
     }
-
-    free(visited);
 }
 
 int main() {
-    char filename[] = "C:/Users/isaac/CLionProjects/TSPMulti/16_coords.coord";
+    char filename[] = "C:/Users/isaac/CLionProjects/TSPMulti/9_coords.coord";
 
     int numOfCoords = readNumOfCoords(filename);
 
