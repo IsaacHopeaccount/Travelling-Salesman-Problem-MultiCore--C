@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>
-#include "coordReader.c"
+#include "coordReader.h"
+#include <time.h>
 
 void matrixDistanceCalc(double **coords, int numOfCoords, double **distanceMatrix) {
     for (int i = 0; i < numOfCoords; i++) {
@@ -73,7 +74,10 @@ void farthestInsertion(double** distanceMatrix, int numOfCoords, int* tour) {
 }
 
 int main() {
-    char filename[] = "C:/Users/isaac/CLionProjects/TSPMulti/9_coords.coord";
+
+    clock_t start_time = clock();
+
+    char filename[] = "C:/Users/isaac/CLionProjects/TSPC/4096_coords.coord";
 
     int numOfCoords = readNumOfCoords(filename);
 
@@ -99,13 +103,12 @@ int main() {
     farthestInsertion(distanceMatrix, numOfCoords, tour);
 
 
-    // Print the order of visited cities in the tour
-    printf("Final Tour: ");
-    for (int i = 0; i < numOfCoords; i++) {
-        printf("%d ", tour[i]);
-    }
-    printf("%d\n", tour[0]);  // Print the starting city again to complete the tour
+    writeTourToFile(tour,numOfCoords,"fiOut.dat");
+    printf("Writing tour to data file\n");
 
+    clock_t end_time = clock();
+    double execution_time = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+    printf("Execution time: %.6f seconds\n", execution_time);
 
     for (int i = 0; i < numOfCoords; i++) {
         free(distanceMatrix[i]);
