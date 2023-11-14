@@ -2,12 +2,11 @@
 #include <stdlib.h>
 #include <math.h>
 #include <float.h>
-#include "coordReader.c"
 #include <omp.h>
+#include "coordReader.h"
 
 
 void matrixDistanceCalc(double **coords, int numOfCoords, double **distanceMatrix) {
-    double start_time = omp_get_wtime(); // Capture the start time
 #pragma omp parallel for
     for (int i = 0; i < numOfCoords; i++) {
         for (int j = i + 1; j < numOfCoords; j++) {
@@ -26,9 +25,6 @@ void matrixDistanceCalc(double **coords, int numOfCoords, double **distanceMatri
         // Set diagonal elements to 0
         distanceMatrix[i][i] = 0;
     }
-    double end_time = omp_get_wtime(); // Capture the end time
-    double execution_time = end_time - start_time;
-    printf("Matrix calculation time: %f seconds\n", execution_time);
 }
 
 void farthestInsertion(double** distanceMatrix, int numOfCoords, int* tour) {
@@ -85,16 +81,11 @@ void farthestInsertion(double** distanceMatrix, int numOfCoords, int* tour) {
         visited[farthestVertex] = 1;
     }
 
-    double end_time = omp_get_wtime(); // Capture the end time
-    double execution_time = end_time - start_time;
-    printf("Insertion calculation time: %f seconds\n", execution_time);
 }
 
 int main() {
     double start_time = omp_get_wtime(); // Capture the start time
-
-    omp_set_num_threads(12);
-    char filename[] = "C:/Users/isaac/CLionProjects/TSPMulti/4096_coords.coord";
+    char filename[] = "4096_coords.coord";
 
     int numOfCoords = readNumOfCoords(filename);
 
@@ -120,13 +111,9 @@ int main() {
     farthestInsertion(distanceMatrix, numOfCoords, tour);
 
 
-    // Print the order of visited cities in the tour
-   /* printf("Final Tour: ");
-    for (int i = 0; i < numOfCoords; i++) {
-        printf("%d ", tour[i]);
-    }
-    printf("%d\n", tour[0]);  // Print the starting city again to complete the tour
-*/
+    writeTourToFile(tour,numOfCoords,"ompfiOut.dat");
+    printf("Writing tour to data file \n");
+
     for (int i = 0; i < numOfCoords; i++) {
         free(distanceMatrix[i]);
     }
